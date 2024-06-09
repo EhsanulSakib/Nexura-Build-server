@@ -23,7 +23,14 @@ async function run() {
       // Connect the client to the server	(optional starting in v4.7)
     //   await client.connect();
 
-        const apartmentCollection = client.db("NexuraBuild").collection('apartment');
+    const apartmentCollection = client.db("NexuraBuild").collection('apartment');
+        
+    app.get('/apartments', async(req,res) =>{
+      const cursor = apartmentCollection.find();
+      const result = await cursor.toArray();
+    
+      res.send(result)
+    })
         
       // Send a ping to confirm a successful connection
       // await client.db("admin").command({ ping: 1 });
