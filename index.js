@@ -26,10 +26,22 @@ async function run() {
     const apartmentCollection = client.db("NexuraBuild").collection('apartment');
         
     app.get('/apartments', async(req,res) =>{
-      const cursor = apartmentCollection.find();
-      const result = await cursor.toArray();
+      const query = req.query
+      const page = parseInt(query.page)
+      const size = parseInt(query.size)
+
+
+      const result = await apartmentCollection.find()
+      .skip(page*size)
+      .limit(size)
+      .toArray();
     
       res.send(result)
+    })
+
+    app.get('/apartmentsCount', async(req,res)=>{
+      const count = await apartmentCollection.estimatedDocumentCount();
+      res.send({count})
     })
         
       // Send a ping to confirm a successful connection
