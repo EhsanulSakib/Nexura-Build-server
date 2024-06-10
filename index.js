@@ -66,7 +66,11 @@ async function run() {
       next();
     }
 
-    
+    // users related api
+    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });    
 
     //apartment related API
     app.get('/apartments', async(req,res) =>{
