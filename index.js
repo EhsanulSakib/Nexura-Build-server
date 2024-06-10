@@ -1,8 +1,12 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const port = process.env.PORT||5000;
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
+
+const port = process.env.PORT||5000;
+
+//middleware
 app.use(cors());
 app.use(express.json());
 
@@ -23,8 +27,17 @@ async function run() {
       // Connect the client to the server	(optional starting in v4.7)
     //   await client.connect();
 
+    const userCollection = client.db("NexuraBuild").collection("users");
     const apartmentCollection = client.db("NexuraBuild").collection('apartment');
-        
+    
+    // jwt related api
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+      res.send({ token });
+    })
+
+    //apartment related API
     app.get('/apartments', async(req,res) =>{
       const query = req.query
       const page = parseInt(query.page)
