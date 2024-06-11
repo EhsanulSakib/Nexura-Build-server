@@ -29,6 +29,7 @@ async function run() {
 
     const userCollection = client.db("NexuraBuild").collection("users");
     const apartmentCollection = client.db("NexuraBuild").collection('apartment');
+    const announcementCollection = client.db("NexuraBuild").collection('announcements');
     
     // jwt related api
     app.post('/jwt', async (req, res) => {
@@ -89,6 +90,20 @@ async function run() {
     });
 
 
+    //member related API
+    app.put('/members/:email', async(req,res)=>{
+      const param = req.params.email
+      
+      const result = await userCollection.updateOne({email: param},{
+        $set:{
+          role: 'user'
+        }
+      })
+      console.log(result)
+
+      res.send(result)
+    })
+
 
     //apartment related API
     app.get('/apartments', async(req,res) =>{
@@ -118,7 +133,16 @@ async function run() {
       const count = await apartmentCollection.estimatedDocumentCount();
       res.send({count})
     })
-        
+    
+
+
+    //announcements related API
+    app.get('/announcements', async(req,res)=>{
+      const result = await announcementCollection.find().toArray();
+      res.send(result)
+    })
+
+
       // Send a ping to confirm a successful connection
       // await client.db("admin").command({ ping: 1 });
       console.log("Pinged your deployment. You successfully connected to MongoDB!");
