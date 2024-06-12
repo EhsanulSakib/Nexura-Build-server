@@ -61,6 +61,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/users/:email', async (req, res) => {
+      const email = req.params.email
+
+      const result = await userCollection.findOne({email: email})
+      res.send(result)
+    });
+
     app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
 
@@ -142,6 +149,12 @@ async function run() {
       res.send(result)
     })
 
+    app.post('/announcements',async(req,res) =>{
+      const announcement = req.body
+      const result = await announcementCollection.insertOne(announcement)
+
+      res.send(result)
+    })
 
       // Send a ping to confirm a successful connection
       // await client.db("admin").command({ ping: 1 });
