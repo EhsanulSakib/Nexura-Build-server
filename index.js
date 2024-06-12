@@ -29,6 +29,7 @@ async function run() {
 
     const userCollection = client.db("NexuraBuild").collection("users");
     const apartmentCollection = client.db("NexuraBuild").collection('apartment');
+    const agreementsCollection = client.db("NexuraBuild").collection('agreements');
     const announcementCollection = client.db("NexuraBuild").collection('announcements');
     const couponsCollection = client.db("NexuraBuild").collection('coupons');
     
@@ -147,6 +148,30 @@ async function run() {
       res.send({count})
     })
     
+
+    //agreement related API
+    app.get('/agreement', async(req,res)=>{
+      const result = await agreementsCollection.find().toArray()
+      res.send(result)
+    })
+    
+    app.get('/agreement/:email', async(req,res)=>{
+      const email = req.params.email
+
+      const result = await agreementsCollection.findOne({userEmail: email})
+      res.send(result)
+    })
+
+    app.post('/agreement', async(req,res)=>{
+      const request = req.body
+
+      const result = await agreementsCollection.insertOne(request)
+      res.send(result)
+    })
+
+    // app.get('/agreement/:id', async(req,res)=>{
+
+    // })
 
 
     //announcements related API
