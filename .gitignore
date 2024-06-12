@@ -1,3 +1,4 @@
 node_modules
 json_files
 .env
+.vercel

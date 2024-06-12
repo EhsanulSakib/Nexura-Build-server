@@ -7,7 +7,14 @@ require('dotenv').config()
 const port = process.env.PORT||5000;
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin:[
+    'http://localhost:5173',
+    'https://nexura-build.web.app',
+    'https://nexura-build.firebaseapp.com',
+],credentials: true}
+));
+
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -98,11 +105,32 @@ async function run() {
       res.send(result);
     });
 
+    app.put('/users/:email', async(req,res)=>{
+      const email = req.params.email
+
+      const result = await userCollection.updateOne({email: email},{
+        $set:{
+          role: "member"
+        }
+      })
+      res.send(result)
+    })
+
 
     //member related API
     app.get('/members', async(req,res)=>{
       const result = await userCollection.find({role: "member"}).toArray()
       res.send(result)
+    })
+
+    app.get('/members/:email', async(req,res)=>{
+      const email = req.params.email
+      const result = await userCollection.findOne({email: email, role: "member"})
+      if (result) {
+        res.status(200).send(result);
+    } else {
+        res.status(404).send({ message: 'Not a Member' });
+    }
     })
 
     app.put('/members/:email', async(req,res)=>{
@@ -166,6 +194,24 @@ async function run() {
       const request = req.body
 
       const result = await agreementsCollection.insertOne(request)
+      res.send(result)
+    })
+
+    app.put('/agreement/:id', async(req,res)=>{
+      const id = req.params.id
+
+      const result = await agreementsCollection.updateOne({_id: new ObjectId(id)},{
+        $set:{
+          status: "checked"
+        }
+      })
+      res.send(result)
+    })
+
+    app.delete('/agreement/:id', async(req,res)=>{
+      const id = req.params.id
+
+      const result = await agreementsCollection.deleteOne({_id: new ObjectId(id)})
       res.send(result)
     })
 
