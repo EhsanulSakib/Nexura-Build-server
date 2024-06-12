@@ -99,6 +99,11 @@ async function run() {
 
 
     //member related API
+    app.get('/members', async(req,res)=>{
+      const result = await userCollection.find({role: "member"}).toArray()
+      res.send(result)
+    })
+
     app.put('/members/:email', async(req,res)=>{
       const param = req.params.email
       
@@ -175,7 +180,6 @@ async function run() {
 
       const result = await couponsCollection.deleteOne({_id: new ObjectId(id)})
       
-      console.log(result)
       res.send(result) 
     })
 
