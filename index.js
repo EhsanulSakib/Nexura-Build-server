@@ -30,6 +30,7 @@ async function run() {
     const userCollection = client.db("NexuraBuild").collection("users");
     const apartmentCollection = client.db("NexuraBuild").collection('apartment');
     const announcementCollection = client.db("NexuraBuild").collection('announcements');
+    const couponsCollection = client.db("NexuraBuild").collection('coupons');
     
     // jwt related api
     app.post('/jwt', async (req, res) => {
@@ -152,6 +153,19 @@ async function run() {
     app.post('/announcements',async(req,res) =>{
       const announcement = req.body
       const result = await announcementCollection.insertOne(announcement)
+
+      res.send(result)
+    })
+
+    //coupons related API
+    app.get('/coupons', async(req,res)=>{
+      const result = await couponsCollection.find().toArray();
+      res.send(result)
+    })
+
+    app.post('/coupons',async(req,res) =>{
+      const coupons = req.body
+      const result = await couponsCollection.insertOne(coupons)
 
       res.send(result)
     })
