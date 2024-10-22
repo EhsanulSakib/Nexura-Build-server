@@ -183,11 +183,16 @@ async function run() {
       res.send(result)
     })
     
-    app.get('/agreement/:email', async(req,res)=>{
-      const email = req.params.email
-
-      const result = await agreementsCollection.findOne({userEmail: email})
-      res.send(result)
+    app.get('/member-agreement', async(req,res)=>{
+      try{
+        const email = req.query.email
+  
+        const result = await agreementsCollection.findOne({userEmail: email})
+        res.send(result)
+      }
+      catch(err){
+        res.send({message: err.message})
+      }
     })
 
     app.post('/agreement', async(req,res)=>{
