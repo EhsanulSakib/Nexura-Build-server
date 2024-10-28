@@ -4,15 +4,16 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
 
-const port = process.env.PORT||5000;
+const port = process.env.PORT || 5000;
 
 //middleware
 app.use(cors({
-  origin:[
+  origin: [
     'http://localhost:5173',
     'https://nexura-build.web.app',
     'https://nexura-build.firebaseapp.com',
-],credentials: true}
+  ], credentials: true
+}
 ));
 
 app.use(express.json());
@@ -30,8 +31,8 @@ const client = new MongoClient(uri, {
 });
 
 async function run() {
-    try {
-      // Connect the client to the server	(optional starting in v4.7)
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
     //   await client.connect();
 
     const userCollection = client.db("NexuraBuild").collection("users");
@@ -39,7 +40,7 @@ async function run() {
     const agreementsCollection = client.db("NexuraBuild").collection('agreements');
     const announcementCollection = client.db("NexuraBuild").collection('announcements');
     const couponsCollection = client.db("NexuraBuild").collection('coupons');
-    
+
     // jwt related api
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -62,7 +63,7 @@ async function run() {
         req.decoded = decoded;
         next();
       })
-    }    
+    }
 
     // users related api
     app.get('/users', async (req, res) => {
@@ -73,7 +74,7 @@ async function run() {
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email
 
-      const result = await userCollection.findOne({email: email})
+      const result = await userCollection.findOne({ email: email })
       res.send(result)
     });
 
@@ -85,7 +86,7 @@ async function run() {
       const user = await userCollection.findOne(query);
       let admin = false;
 
-      if (user?.role !=='admin'){
+      if (user?.role !== 'admin') {
         return res.status(401).send({ message: 'unauthorized access' })
       }
       if (user) {
@@ -93,7 +94,7 @@ async function run() {
       }
       res.send({ admin });
     })
-    
+
     app.post('/users', async (req, res) => {
       const user = req.body;
       const query = { email: user.email }
@@ -105,39 +106,44 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/users/:email', async(req,res)=>{
+    app.put('/users/:email', async (req, res) => {
       const email = req.params.email
 
-      const result = await userCollection.updateOne({email: email},{
-        $set:{
+      const result = await userCollection.updateOne({ email: email }, {
+        $set: {
           role: "member"
         }
       })
-      res.send(result)
+      res.status(200).send(result)
     })
 
 
     //member related API
-    app.get('/members', async(req,res)=>{
-      const result = await userCollection.find({role: "member"}).toArray()
-      res.send(result)
+    app.get('/members', async (req, res) => {
+      try {
+        const result = await userCollection.find({ role: "member" }).toArray()
+        res.status(200).send(result)
+      }
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
     })
 
-    app.get('/members/:email', async(req,res)=>{
+    app.get('/members/:email', async (req, res) => {
       const email = req.params.email
-      const result = await userCollection.findOne({email: email, role: "member"})
+      const result = await userCollection.findOne({ email: email, role: "member" })
       if (result) {
         res.status(200).send(result);
-    } else {
+      } else {
         res.status(404).send({ message: 'Not a Member' });
-    }
+      }
     })
 
-    app.put('/members/:email', async(req,res)=>{
+    app.put('/members/:email', async (req, res) => {
       const param = req.params.email
-      
-      const result = await userCollection.updateOne({email: param},{
-        $set:{
+
+      const result = await userCollection.updateOne({ email: param }, {
+        $set: {
           role: 'user'
         }
       })
@@ -148,17 +154,17 @@ async function run() {
 
 
     //apartment related API
-    app.get('/apartments', async(req,res) =>{
+    app.get('/apartments', async (req, res) => {
       const query = req.query
       const page = parseInt(query.page)
       const size = parseInt(query.size)
 
 
       const result = await apartmentCollection.find()
-      .skip(page*size)
-      .limit(size)
-      .toArray();
-    
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+
       res.send(result)
     })
 
@@ -171,110 +177,206 @@ async function run() {
     })
 
 
-    app.get('/apartmentsCount', async(req,res)=>{
-      const count = await apartmentCollection.estimatedDocumentCount();
-      res.send({count})
+    app.get('/apartmentsCount', async (req, res) => {
+      try {
+        const count = await apartmentCollection.estimatedDocumentCount();
+        res.send({ count })
+      }
+      catch (err) {
+        res.send({ message: err.message })
+      }
     })
-    
+
 
     //agreement related API
-    app.get('/agreement', async(req,res)=>{
+    app.get('/agreement', async (req, res) => {
       const result = await agreementsCollection.find().toArray()
       res.send(result)
     })
-    
-    app.get('/member-agreement', async(req,res)=>{
-      try{
+
+    app.get('/member-agreement', async (req, res) => {
+      try {
         const email = req.query.email
-  
-        const result = await agreementsCollection.findOne({userEmail: email})
+
+        const result = await agreementsCollection.findOne({ userEmail: email })
         res.send(result)
       }
-      catch(err){
-        res.send({message: err.message})
+      catch (err) {
+        res.send({ message: err.message })
       }
     })
 
-    app.post('/agreement', async(req,res)=>{
+    app.post('/agreement', async (req, res) => {
       const request = req.body
 
       const result = await agreementsCollection.insertOne(request)
       res.send(result)
     })
 
-    app.put('/agreement/:id', async(req,res)=>{
+    app.put('/agreement/:id', async (req, res) => {
       const id = req.params.id
 
-      const result = await agreementsCollection.updateOne({_id: new ObjectId(id)},{
-        $set:{
+      const result = await agreementsCollection.updateOne({ _id: new ObjectId(id) }, {
+        $set: {
           status: "checked"
         }
       })
       res.send(result)
     })
 
-    app.delete('/agreement/:id', async(req,res)=>{
+    app.delete('/agreement/:id', async (req, res) => {
       const id = req.params.id
 
-      const result = await agreementsCollection.deleteOne({_id: new ObjectId(id)})
+      const result = await agreementsCollection.deleteOne({ _id: new ObjectId(id) })
       res.send(result)
     })
-
-    // app.get('/agreement/:id', async(req,res)=>{
-
-    // })
 
 
     //announcements related API
-    app.get('/announcements', async(req,res)=>{
-      const result = await announcementCollection.find().toArray();
-      res.send(result)
+    //all announcements (latest first)
+    app.get('/announcements', async (req, res) => {
+      try {
+        const result = await announcementCollection.find().sort({ _id: -1 }).toArray();
+        if (result.length === 0) {
+          return res.status(404).send({ message: 'No announcements found' })
+        }
+        res.send(result);
+      }
+      catch (err) {
+        res.send({ message: err.message })
+      }
+    });
+
+
+    //single announcement
+    app.get('/announcements/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        if (!id) {
+          return res.status(400).send({ message: 'id is required' });
+        }
+
+        const query = { _id: new ObjectId(id) }
+        const result = await announcementCollection.findOne(query);
+        if (!result) {
+          return res.status(404).send({ message: 'Announcement not found' });
+        }
+        res.send(result);
+      }
+      catch (err) {
+        res.send(err.message)
+      }
     })
 
-    app.post('/announcements',async(req,res) =>{
-      const announcement = req.body
-      const result = await announcementCollection.insertOne(announcement)
 
-      res.send(result)
+    //post announcement
+    app.post('/announcements', async (req, res) => {
+      try {
+        const announcement = req.body
+        if (!announcement) {
+          return res.status(400).send({ message: 'announcement is required' });
+        }
+
+        const result = await announcementCollection.insertOne(announcement)
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
     })
+
+
+    //update announcement
+    app.put('/update-announcements/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        if (!id) {
+          return res.status(400).send({ message: 'id is required' });
+        }
+
+        const result = await announcementCollection.findOne({ _id: new ObjectId(id) });
+        if (!result) {
+          return res.status(404).send({ message: 'Announcement not found' });
+        }
+
+        const updateFields = {
+          post_date: req.body.post_date,
+          post_title: req.body.post_title,
+          description: req.body.description
+        };
+
+        const updateAnnouncement = await announcementCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateFields },
+          { upsert: false }
+        );
+
+        res.send(updateAnnouncement);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    //delete announcement
+    app.delete('/delete-announcements/:id', async (req, res) => {
+      try {
+        const id = req.params.id
+
+        if (!id) {
+          return res.send({ status: 400, message: 'id is required' })
+        }
+        const result = await announcementCollection.deleteOne({ _id: new ObjectId(id) })
+
+        if (result.deletedCount === 0) {
+          return res.send({ status: 404, message: 'Announcement not found' })
+        }
+        res.send(result)
+      }
+      catch (err) {
+        res.send({ message: err.message })
+      }
+    })
+
 
     //coupons related API
-    app.get('/coupons', async(req,res)=>{
+    app.get('/coupons', async (req, res) => {
       const result = await couponsCollection.find().toArray();
       res.send(result)
     })
 
-    app.post('/coupons',async(req,res) =>{
+    app.post('/coupons', async (req, res) => {
       const coupons = req.body
       const result = await couponsCollection.insertOne(coupons)
 
       res.send(result)
     })
 
-    app.delete('/coupons/:id', async(req,res)=>{
+    app.delete('/coupons/:id', async (req, res) => {
       const id = req.params.id
 
-      const result = await couponsCollection.deleteOne({_id: new ObjectId(id)})
-      
-      res.send(result) 
+      const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) })
+
+      res.send(result)
     })
 
-      // Send a ping to confirm a successful connection
-      // await client.db("admin").command({ ping: 1 });
-      console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } finally {
-      // Ensures that the client will close when you finish/error
+    // Send a ping to confirm a successful connection
+    // await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
     //   await client.close();
-    }
   }
-  run().catch(console.dir);
+}
+run().catch(console.dir);
 
 
 
-app.get('/',(req,res)=>{
-    res.send("NexuraBuild server running")
+app.get('/', (req, res) => {
+  res.send("NexuraBuild server running")
 })
 
-app.listen(port,()=>{
-    console.log(`NexuraBuild is running on PORT: ${port}`)
+app.listen(port, () => {
+  console.log(`NexuraBuild is running on PORT: ${port}`)
 })
