@@ -341,11 +341,29 @@ async function run() {
 
 
     //coupons related API
+    // fetch all coupons
     app.get('/coupons', async (req, res) => {
       const result = await couponsCollection.find().toArray();
       res.send(result)
     })
 
+    // fetch single coupon
+    app.get('/coupons/:id', async (req, res) => {
+      try {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await couponsCollection.findOne(query)
+        if (!result) {
+          return res.status(404).send({ message: 'Coupon not found' })
+        }
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
+    })
+
+    // post coupon
     app.post('/coupons', async (req, res) => {
       const coupons = req.body
       const result = await couponsCollection.insertOne(coupons)
@@ -353,7 +371,41 @@ async function run() {
       res.send(result)
     })
 
-    app.delete('/coupons/:id', async (req, res) => {
+
+    // update coupon
+    app.put('/update-coupons/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        if (!id) {
+          return res.status(400).send({ message: 'id is required' });
+        }
+
+        const result = await couponsCollection.findOne({ _id: new ObjectId(id) });
+        if (!result) {
+          return res.status(404).send({ message: 'Coupon not found' });
+        }
+
+        const updateFields = {
+          coupon_title: req.body.coupon_title,
+          coupon_code: req.body.coupon_code,
+          discount: req.body.discount,
+          description: req.body.description
+        };
+
+        const updateCoupon = await couponsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateFields },
+          { upsert: false }
+        );
+
+        res.send(updateCoupon);
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    })
+
+    app.delete('/delete-coupons/:id', async (req, res) => {
       const id = req.params.id
 
       const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) })
