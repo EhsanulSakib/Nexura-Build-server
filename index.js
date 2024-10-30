@@ -156,16 +156,21 @@ async function run() {
     //apartment related API
     app.get('/apartments', async (req, res) => {
       const query = req.query
-      const page = parseInt(query.page)
-      const size = parseInt(query.size)
+      const page = parseInt(query.page) || 0
+      const size = parseInt(query.size) || 6
 
-
-      const result = await apartmentCollection.find()
-        .skip(page * size)
-        .limit(size)
-        .toArray();
-
-      res.send(result)
+      try {
+        const result = await apartmentCollection
+          .find()
+          .sort({ _id: 1 })
+          .skip(page * size)
+          .limit(size)
+          .toArray();
+        res.send(result);
+      }
+      catch (err) {
+        res.send({ message: err.message })
+      }
     })
 
 
@@ -194,24 +199,93 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/user-agreement', async (req, res) => {
+      try {
+        const email = req.query.email
+        const result = await agreementsCollection.findOne({ userEmail: email })
+        if (result) {
+          res.send(result)
+        }
+        else {
+          res.status(404).send({ message: "Not found" })
+        }
+      }
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
+    })
+
     app.get('/member-agreement', async (req, res) => {
       try {
         const email = req.query.email
 
         const result = await agreementsCollection.findOne({ userEmail: email })
-        res.send(result)
+        if (result) {
+          res.send(result)
+        }
+        else {
+          res.status(404).send({ message: "Not found" })
+        }
       }
       catch (err) {
         res.send({ message: err.message })
       }
     })
 
-    app.post('/agreement', async (req, res) => {
-      const request = req.body
+    app.post('/apply-agreement', async (req, res) => {
+      try {
+        const request = req.body
 
-      const result = await agreementsCollection.insertOne(request)
-      res.send(result)
+        const { apartment_no } = request
+
+        const isAvailable = await apartmentCollection.findOne({ apartment_no: apartment_no })
+
+        if (isAvailable.status === "pending" || isAvailable.status === "rented") {
+          return res.send.status(400).send({ message: "Can not apply for this apartment" })
+        }
+
+        const result = await agreementsCollection.insertOne(request)
+
+        if (result.acknowledged) {
+          await apartmentCollection.updateOne({ apartment_no: apartment_no }, {
+            $set: {
+              status: "pending"
+            }
+          })
+        }
+
+        res.send(result)
+      }
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
     })
+
+    app.get('/cancel-agreement/:apartment_no', async (req, res) => {
+      try {
+        const apartment_no = req.params.apartment_no
+
+        const find = await agreementsCollection.findOne({ apartment_no: apartment_no })
+        if (!find) {
+          return res.status(404).send({ message: "Not found" })
+        }
+
+        const updateApartmentStatus = await apartmentCollection.updateOne({ apartment_no: apartment_no }, {
+          $set: {
+            status: "available"
+          }
+        })
+
+        if (updateApartmentStatus.acknowledged) {
+          const result = await agreementsCollection.deleteOne({ apartment_no: apartment_no })
+          res.send(result)
+        }
+      }
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
+    })
+
 
     app.put('/agreement/:id', async (req, res) => {
       const id = req.params.id
