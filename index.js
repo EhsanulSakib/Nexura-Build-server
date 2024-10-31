@@ -244,24 +244,29 @@ async function run() {
           return res.send.status(400).send({ message: "Can not apply for this apartment" })
         }
 
-        const result = await agreementsCollection.insertOne(request)
+        const agreementInfo = await agreementsCollection.insertOne(request)
 
-        if (result.acknowledged) {
-          await apartmentCollection.updateOne({ apartment_no: apartment_no }, {
+        if (agreementInfo.acknowledged) {
+          const updateApartment = await apartmentCollection.updateOne({ apartment_no: apartment_no }, {
             $set: {
               status: "pending"
             }
           })
-        }
 
-        res.send(result)
+          if (updateApartment.acknowledged) {
+            const apartmentInfo = await apartmentCollection.findOne({ apartment_no: apartment_no })
+
+            res.send({ agreementInfo, apartmentInfo })
+          }
+        }
       }
       catch (err) {
         res.status(500).send({ message: err.message })
       }
     })
 
-    app.get('/cancel-agreement/:apartment_no', async (req, res) => {
+    //cancel agreement
+    app.delete('/cancel-agreement/:apartment_no', async (req, res) => {
       try {
         const apartment_no = req.params.apartment_no
 
@@ -277,8 +282,12 @@ async function run() {
         })
 
         if (updateApartmentStatus.acknowledged) {
-          const result = await agreementsCollection.deleteOne({ apartment_no: apartment_no })
-          res.send(result)
+          const agreementInfo = await agreementsCollection.deleteOne({ apartment_no: apartment_no })
+
+          if (agreementInfo.acknowledged) {
+            const apartmentInfo = await apartmentCollection.findOne({ apartment_no: apartment_no })
+            res.send({ agreementInfo, apartmentInfo })
+          }
         }
       }
       catch (err) {
