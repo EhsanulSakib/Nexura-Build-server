@@ -265,7 +265,7 @@ async function run() {
       }
     })
 
-    //cancel agreement
+    //cancel agreement while user
     app.delete('/cancel-agreement/:apartment_no', async (req, res) => {
       try {
         const apartment_no = req.params.apartment_no
@@ -296,15 +296,47 @@ async function run() {
     })
 
 
-    app.put('/agreement/:id', async (req, res) => {
-      const id = req.params.id
-
-      const result = await agreementsCollection.updateOne({ _id: new ObjectId(id) }, {
-        $set: {
-          status: "checked"
+    //accept agreement API
+    app.put('/accept-agreement/:id', async (req, res) => {
+      try {
+        const id = req.params.id
+        const findAgreement = await agreementsCollection.findOne({ _id: new ObjectId(id) })
+        if (!findAgreement) {
+          return res.status(404).send({ message: "Not found" })
         }
-      })
-      res.send(result)
+
+        const updateApartmentStatus = await apartmentCollection.updateOne({ apartment_no: findAgreement.apartment_no }, {
+          $set: {
+            status: "rented"
+          }
+        })
+
+        if (updateApartmentStatus.acknowledged) {
+          const agreementUpdate = await agreementsCollection.updateOne({ _id: new ObjectId(id) }, {
+            $set: {
+              status: "accepted",
+              agreementAcceptDate: new Date().toISOString().split("T")[0]
+            }
+          })
+
+          if (agreementUpdate.acknowledged) {
+            const updateUser = await userCollection.updateOne({ email: findAgreement.userEmail }, {
+              $set: {
+                role: "member"
+              }
+            })
+
+            if (updateUser.acknowledged) {
+              const agreementInfo = await agreementsCollection.findOne({ _id: new ObjectId(id) })
+              res.send(agreementInfo)
+            }
+          }
+
+        }
+      }
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
     })
 
     app.delete('/agreement/:id', async (req, res) => {
