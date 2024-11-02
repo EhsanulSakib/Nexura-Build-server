@@ -33,7 +33,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    //   await client.connect();
+    // await client.connect();
 
     const userCollection = client.db("NexuraBuild").collection("users");
     const apartmentCollection = client.db("NexuraBuild").collection('apartment');
@@ -70,6 +70,32 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
+
+    app.get('/users-search/:search', async (req, res) => {
+      try {
+        const search = req.params.search
+
+        if (search === 'all') {
+          const result = await userCollection.find().toArray();
+          res.send(result)
+        }
+        else if (search === 'admin') {
+          const result = await userCollection.find({ role: 'admin' }).toArray();
+          res.send(result)
+        }
+        else if (search === 'user') {
+          const result = await userCollection.find({ role: 'user' }).toArray();
+          res.send(result)
+        }
+        else if (search === 'member') {
+          const result = await userCollection.find({ role: 'member' }).toArray();
+          res.send(result)
+        }
+      }
+      catch (error) {
+        res.status(500).send({ message: error.message })
+      }
+    })
 
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email
@@ -139,17 +165,52 @@ async function run() {
       }
     })
 
-    app.put('/members/:email', async (req, res) => {
-      const param = req.params.email
+    app.put('/delete-member/:email', async (req, res) => {
+      try {
+        const email = req.params.email
 
-      const result = await userCollection.updateOne({ email: param }, {
-        $set: {
-          role: 'user'
+        const findUser = await userCollection.findOne({ email: email })
+        if (findUser) {
+          const updateUser = await userCollection.updateOne({ email: findUser.email }, {
+            $set: {
+              role: "user"
+            }
+          })
+
+          if (updateUser.acknowledged) {
+            const findAgreement = await agreementsCollection.findOne({ userEmail: email })
+
+            if (!findAgreement) {
+              res.status(200).send({ message: 'Agreement not found' })
+            }
+
+            const findApartment = await apartmentCollection.findOne({ apartment_no: findAgreement.apartment_no })
+
+            if (!findApartment) {
+              res.status(200).send({ message: 'Apartment not found' })
+            }
+
+            const updateApartment = await apartmentCollection.updateOne({ apartment_no: findAgreement.apartment_no }, {
+              $set: {
+                status: "available"
+              }
+            })
+
+            if (updateApartment.acknowledged) {
+              const deleteAgreement = await agreementsCollection.deleteOne({ userEmail: email })
+
+              if (deleteAgreement.acknowledged) {
+                const updatedUser = await userCollection.findOne({ email: email })
+                res.status(200).send(updatedUser)
+              }
+            }
+          }
         }
-      })
-      console.log(result)
+      }
 
-      res.send(result)
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
     })
 
 
@@ -215,6 +276,7 @@ async function run() {
       }
     })
 
+    //member related API
     app.get('/member-agreement', async (req, res) => {
       try {
         const email = req.query.email
@@ -257,6 +319,43 @@ async function run() {
             const apartmentInfo = await apartmentCollection.findOne({ apartment_no: apartment_no })
 
             res.send({ agreementInfo, apartmentInfo })
+          }
+        }
+      }
+      catch (err) {
+        res.status(500).send({ message: err.message })
+      }
+    })
+
+    //member cancel agreement
+    app.delete('/member-cancel-agreement', async (req, res) => {
+      try {
+        const email = req.query.email
+
+        const findAgreement = await agreementsCollection.findOne({ userEmail: email })
+        if (!findAgreement) {
+          return res.status(404).send({ message: "Not found" })
+        }
+
+        const deleteAgreement = await agreementsCollection.deleteOne({ userEmail: email })
+
+        if (deleteAgreement.acknowledged) {
+          const userUpdate = await userCollection.updateOne({ email: email }, {
+            $set: {
+              role: "user"
+            }
+          })
+
+          if (userUpdate.acknowledged) {
+            const apartmentUpdate = await apartmentCollection.updateOne({ apartment_no: findAgreement.apartment_no }, {
+              $set: {
+                status: "available"
+              }
+            })
+
+            if (apartmentUpdate.acknowledged) {
+              res.send(deleteAgreement)
+            }
           }
         }
       }
