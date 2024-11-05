@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 const port = process.env.PORT || 5000;
 
@@ -40,6 +41,8 @@ async function run() {
     const agreementsCollection = client.db("NexuraBuild").collection('agreements');
     const announcementCollection = client.db("NexuraBuild").collection('announcements');
     const couponsCollection = client.db("NexuraBuild").collection('coupons');
+    const monthsCollection = client.db("NexuraBuild").collection('months');
+    const paymentsCollection = client.db("NexuraBuild").collection('payments');
 
     // jwt related api
     app.post('/jwt', async (req, res) => {
@@ -625,6 +628,65 @@ async function run() {
       const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) })
 
       res.send(result)
+    })
+
+    //month related API
+    app.get('/all-months', async (req, res) => {
+      try {
+        const result = await monthsCollection.find().toArray()
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
+    })
+
+    // post a month
+    app.post('/create-month', async (req, res) => {
+      try {
+        const month = req.body
+        if (!month) {
+          return res.status(400).send({ message: 'Month is required' });
+        }
+        const result = await monthsCollection.insertOne(month)
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
+    })
+
+    //payments related API
+    //Stripe API call for payment
+    app.post('/create-payment-intent', async (req, res) => {
+      try {
+        const { price } = req.body
+        const amount = parseInt(price * 100)
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: 'bdt',
+          payment_method_types: ['card']
+        })
+
+        res.send({ clientSecret: paymentIntent.client_secret })
+
+      }
+      catch (err) {
+        res.send(err.message)
+      }
+    })
+
+    //store payment history in database
+    app.post('/pay-rent', async (req, res) => {
+      try {
+        const payment = req.body
+        const result = await paymentsCollection.insertOne(payment)
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
     })
 
     // Send a ping to confirm a successful connection
