@@ -677,6 +677,18 @@ async function run() {
       }
     })
 
+    //get specific user payment history
+    app.get('/payment-history', async (req, res) => {
+      try {
+        const email = req.query.email
+        const result = await paymentsCollection.find({ email: email }).toArray()
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
+    })
+
     //store payment history in database
     app.post('/pay-rent', async (req, res) => {
       try {
