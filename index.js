@@ -657,6 +657,37 @@ async function run() {
     })
 
     //payments related API
+    //get specific user payment history
+    app.get('/payment-history', async (req, res) => {
+      try {
+        const email = req.query.email
+        const result = await paymentsCollection.find({ email: email }).toArray()
+        res.send(result)
+      }
+      catch (err) {
+        res.send(err.message)
+      }
+    })
+
+    // get all members payments
+    app.get('/all-payment-history', async (req, res) => {
+      try {
+        const { email, month } = req.query;
+        let query = {};
+
+        // Build the query object based on provided parameters
+        if (email) query.email = email;
+        if (month) query.monthOfPayment = month;
+
+        // Fetch based on the query
+        const result = await paymentsCollection.find(query).toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
+    });
+
+
     //Stripe API call for payment
     app.post('/create-payment-intent', async (req, res) => {
       try {
@@ -671,18 +702,6 @@ async function run() {
 
         res.send({ clientSecret: paymentIntent.client_secret })
 
-      }
-      catch (err) {
-        res.send(err.message)
-      }
-    })
-
-    //get specific user payment history
-    app.get('/payment-history', async (req, res) => {
-      try {
-        const email = req.query.email
-        const result = await paymentsCollection.find({ email: email }).toArray()
-        res.send(result)
       }
       catch (err) {
         res.send(err.message)
